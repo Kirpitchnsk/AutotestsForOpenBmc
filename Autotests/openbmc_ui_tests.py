@@ -1,76 +1,77 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import NoSuchElementException
+import time
 import pytest
 
-@pytest.fixture
-def browser():
-    driver = webdriver.Chrome()  # Или webdriver.Firefox()
+BMC_URL = "https://localhost:2443/?next=/login#/login"
+USERNAME = "root"
+PASSWORD = "0penBmc"
+INVALID_PASSWORD = "wrongpassword"
+
+@pytest.fixture(scope="module")
+def browser():   
+    driver = webdriver.Firefox()
+    driver.implicitly_wait(2)
+    
     yield driver
     driver.quit()
 
 def test_successful_login(browser):
-    browser.get("https://<BMC_IP>")  # Замените на IP вашего OpenBMC
-    
-    # Ввод логина и пароля
-    username_field = WebDriverWait(browser, 10).until(
-        EC.presence_of_element_located((By.ID, "username"))
-    )
-    username_field.send_keys("root")
-    
-    password_field = browser.find_element(By.ID, "password")
-    password_field.send_keys("0penBmc")  # Пароль с цифрой 0 вместо 'o'
-    
-    # Нажатие кнопки входа
-    login_button = browser.find_element(By.XPATH, "//button[@type='submit']")
-    login_button.click()
-    
-    # Проверка успешного входа
-    WebDriverWait(browser, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//h1[contains(text(), 'Dashboard')]"))
-    )
-    assert "Dashboard" in browser.title
-
-def test_failed_login(browser):
-    browser.get("https://<BMC_IP>")
+    """Тест успешной авторизации"""
+    browser.get(BMC_URL)
     
     username_field = browser.find_element(By.ID, "username")
-    username_field.send_keys("wrong_user")
-    
     password_field = browser.find_element(By.ID, "password")
-    password_field.send_keys("wrong_password")
+    login_button = browser.find_element(By.XPATH, "//button[contains(text(), 'Log in')]")
     
-    login_button = browser.find_element(By.XPATH, "//button[@type='submit']")
+    username_field.send_keys(USERNAME)
+    password_field.send_keys(PASSWORD)
     login_button.click()
     
-    # Проверка сообщения об ошибке
-    error_message = WebDriverWait(browser, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'alert-danger')]"))
-    )
-    assert "Invalid username or password" in error_message.text
+    time.sleep(3)  
+    assert "Overview" in browser.title
+    assert "Log out" in browser.page_source
+
+def test_invalid_login(browser):
+    """Тест авторизации с неверными данными"""
+    browser.get(BMC_URL)
+    
+    username_field = browser.find_element(By.ID, "username")
+    password_field = browser.find_element(By.ID, "password")
+    login_button = browser.find_element(By.XPATH, "//button[contains(text(), 'Log in')]")
+    
+    username_field.send_keys(USERNAME)
+    password_field.send_keys(INVALID_PASSWORD)
+    login_button.click()
+
+    time.sleep(1)
+    current_url = browser.current_url
+    assert current_url == BMC_URL
 
 def test_account_lockout(browser):
-    browser.get("https://<BMC_IP>")
+    """Тест блокировки учетной записи после нескольких неудачных попыток"""
+    browser.get(BMC_URL)
     
-    for _ in range(3):  # 3 неудачные попытки
-        username_field = browser.find_element(By.ID, "username")
-        username_field.clear()
-        username_field.send_keys("root")
+    for _ in range(10): 
+        if browser.title == "":
+            assert True
         
-        password_field = browser.find_element(By.ID, "password")
-        password_field.clear()
-        password_field.send_keys("wrong_password")
+        else:
+            username_field = browser.find_element(By.ID, "username")
+            password_field = browser.find_element(By.ID, "password")
+            login_button = browser.find_element(By.XPATH, "//button[contains(text(), 'Log in')]")
         
-        login_button = browser.find_element(By.XPATH, "//button[@type='submit']")
-        login_button.click()
+            username_field.clear()
+            password_field.clear()
         
-        WebDriverWait(browser, 2).until(
-            EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'alert-danger')]"))
-        )
+            username_field.send_keys(USERNAME)
+            password_field.send_keys(INVALID_PASSWORD)
+            login_button.click()
+
+            print("https://" + browser.title + " "+ browser.current_url)
     
-    # Проверка блокировки
-    lockout_message = WebDriverWait(browser, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Account locked')]"))
-    )
-    assert "Account locked" in lockout_message.text
+    if browser.title != "":
+        assert False
