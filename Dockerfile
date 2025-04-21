@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     ipmitool \
     xvfb \
     chromium-browser \
-    libglib2.0-dev libnss3 libgconf-2-4 libxss1 libappindicator3-1 libasound2 \
+    libglib2.0-dev libnss3 libxss1 libappindicator3-1 libasound2t64 \
     && apt-get clean
 
 RUN pip3 install --no-cache-dir \
