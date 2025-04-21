@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'openbmc-ci-agent'
+            args '--privileged'
+        }
+    }
 
     environment {
         BMC_IMAGE = 'romulus/obmc-phosphor-image-romulus-20250212052422.static.mtd'
