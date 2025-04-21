@@ -1,41 +1,68 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.10-slim'
-            args '--privileged -v /dev/kvm:/dev/kvm'
-        }
+    agent any
+
+    environment {
+        BMC_IMAGE = 'romulus/obmc-phosphor-image-romulus-20250212052422.static.mtd'
+        BMC_LOGIN = 'root'
+        BMC_PASS = '0penBmc'
+        QEMU_CMD = """qemu-system-arm -m 256 -M romulus-bmc -nographic \
+            -drive file=$BMC_IMAGE,format=raw,if=mtd \
+            -net nic -net user,hostfwd=:0.0.0.0:2222-:22 \
+            -net user,hostfwd=udp:0.0.0.0:2623-:623,hostname=qemu"""
     }
 
     stages {
-        stage('Setup') {
+
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/<твой-репозиторий>'
+            }
+        }
+
+        stage('Run OpenBMC in QEMU') {
             steps {
                 sh '''
-                apt-get update && apt-get install -y qemu-system-arm
-                pip install pytest pytest-html selenium
+                    nohup $QEMU_CMD > qemu.log 2>&1 &
+                    sleep 20
+                    echo "QEMU started"
                 '''
             }
         }
 
-        stage('Run Tests') {
+        stage('Run Selenium UI Tests') {
+            steps {
+                sh 'pytest tests/api/openbmc_ui_tests.py --junitxml=api_report.xml'
+            }
+        }
+
+        stage('Run Redfish API Tests') {
+            steps {
+                sh 'pytest tests/api/test_redfish.py --junitxml=api_report.xml'
+            }
+        }
+
+        stage('Run Locust Load Test') {
             steps {
                 sh '''
-                cd tests/webui
-                pytest test_login.py --html=report.html
+                    locust -f tests/load/locustfile.py --headless \
+                    -u 10 -r 2 --run-time 1m \
+                    --host https://localhost:2443 \
+                    --csv=load_test_result
                 '''
             }
         }
 
-        stage('Deploy') {
-            when { branch 'main' }
+        stage('Archive Results') {
             steps {
-                sh 'echo "Deploying to production..."'
+                archiveArtifacts artifacts: '**/*.xml, **/*.log, **/*.csv', allowEmptyArchive: true
             }
         }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'tests/**/report.html', fingerprint: true
+            sh 'pkill qemu-system-arm || true'
+            echo 'QEMU terminated'
         }
     }
 }
