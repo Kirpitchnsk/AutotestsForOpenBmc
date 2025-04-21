@@ -13,7 +13,7 @@ INVALID_PASSWORD = "wrongpassword"
 
 @pytest.fixture(scope="module")
 def browser():   
-    driver = webdriver.Firefox()
+    driver = webdriver.Chrome()
     driver.implicitly_wait(2)
     
     yield driver

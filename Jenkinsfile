@@ -15,7 +15,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/<твой-репозиторий>'
+                git 'https://github.com/Kirpitchnsk/TestsForOpenBmc'
             }
         }
 
