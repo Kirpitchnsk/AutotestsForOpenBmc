@@ -28,4 +28,6 @@ ENV DISPLAY=:99
 CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 & tail -f /dev/null"]
 
 # docker build -t openbmc-ci-agent .
-# 
+# org.codehaus.groovy.control.MultipleCompilationErrorsException: startup failed:
+# WorkflowScript: 3: Invalid agent type "docker" specified. Must be one of [any, label, none] @ line 3, column 9.
+# docker {
