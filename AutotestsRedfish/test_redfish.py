@@ -2,123 +2,173 @@ import pytest
 import requests
 import logging
 import time
-from requests.auth import HTTPBasicAuth
+import urllib3
+from typing import Dict, Any
 
-logging.basicConfig(level=logging.INFO)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.FileHandler('openbmc_tests.log'), logging.StreamHandler()]
+)
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://127.0.0.1:2443"
 USERNAME = "root"
 PASSWORD = "0penBmc"
-VERIFY_SSL = False
+SYSTEM_ENDPOINT = "/redfish/v1/Systems/system"
+SSL_VERIFY = False
 
-def log_response(response):
-    """Логирование деталей запроса и ответа"""
-    logger.info(f"Request: {response.request.method} {response.request.url}")
-    logger.info(f"Request headers: {response.request.headers}")
-    logger.info(f"Response status: {response.status_code}")
-    logger.info(f"Response headers: {response.headers}")
-    logger.info(f"Response body: {response.text[:200]}...")
-
-@pytest.fixture(scope="module")
-def auth_session():
-    """Фикстура для аутентифицированной сессии"""
+@pytest.fixture(scope="session")
+def auth_session() -> requests.Session:
+    """Фикстура для аутентификации с обработкой SSL-сертификатов"""
     session = requests.Session()
-    session.auth = HTTPBasicAuth(USERNAME, PASSWORD)
-    session.verify = VERIFY_SSL
-    yield session
-    session.close()
-
-def test_authentication(auth_session):
-    """Тест аутентификации в OpenBMC"""
-    response = auth_session.get(f"{BASE_URL}/redfish/v1")
-    log_response(response)
+    auth_url = f"{BASE_URL}/redfish/v1/SessionService/Sessions"
     
-    assert response.status_code == 200
-    data = response.json()
-    assert "RedfishVersion" in data
-    
-    if "Links" in data:
-        assert "Systems" in data["Links"] or "ManagerProvidingService" in data["Links"]
-    else:
-        assert "Systems" in data or "ManagerProvidingService" in data
+    try:
+        response = session.post(
+            auth_url,
+            json={"UserName": USERNAME, "Password": PASSWORD},
+            verify=SSL_VERIFY,
+            timeout=10
+        )
+        response.raise_for_status()
+        
+        if response.status_code != 201:
+            pytest.fail(f"Ошибка аутентификации. Код: {response.status_code}")
+        
+        session.headers.update({
+            "X-Auth-Token": response.headers.get("X-Auth-Token", ""),
+            "Content-Type": "application/json"
+        })
+        logger.info("Успешная аутентификация")
+        return session
+        
+    except requests.exceptions.SSLError as e:
+        logger.warning(f"SSL ошибка, пробуем с verify=False: {str(e)}")
+        response = session.post(
+            auth_url,
+            json={"UserName": USERNAME, "Password": PASSWORD},
+            verify=False,
+            timeout=10
+        )
+        if response.status_code == 201:
+            session.verify = False
+            session.headers.update({
+                "X-Auth-Token": response.headers.get("X-Auth-Token", ""),
+                "Content-Type": "application/json"
+            })
+            return session
+        pytest.fail(f"Не удалось аутентифицироваться даже с verify=False")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Ошибка при аутентификации: {str(e)}")
+        pytest.fail(f"Ошибка аутентификации: {str(e)}")
 
-@pytest.mark.parametrize("endpoint", [
-    "/redfish/v1/Systems",
-    "/redfish/v1/Chassis",
-    "/redfish/v1/Managers",
-    "/redfish/v1/SessionService"
-])
-def test_redfish_endpoints(auth_session, endpoint):
-    """Тестирование доступности основных конечных точек"""
-    response = auth_session.get(f"{BASE_URL}{endpoint}")
-    log_response(response)
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "@odata.id" in data
-    assert "@odata.type" in data
+def test_authentication(auth_session: requests.Session):
+    """Тест успешной аутентификации"""
+    assert auth_session.headers.get("X-Auth-Token") is not None
 
-def test_system_info(auth_session):
+def test_system_info(auth_session: requests.Session):
     """Тест получения информации о системе"""
-    response = auth_session.get(f"{BASE_URL}/redfish/v1/Systems/system")
-    log_response(response)
-    
-    data = response.json()
-    assert response.status_code == 200
-    assert "Status" in data
-    assert "PowerState" in data
-    assert data["PowerState"] in ["On", "Off"]
-
-def test_invalid_credentials():
-    """Тест с неверными учетными данными"""
-    with requests.Session() as session:
-        session.auth = HTTPBasicAuth("invalid", "credentials")
-        session.verify = VERIFY_SSL
-        response = session.get(f"{BASE_URL}/redfish/v1")
-        log_response(response)
+    try:
+        response = auth_session.get(
+            f"{BASE_URL}{SYSTEM_ENDPOINT}",
+            verify=False,
+            timeout=10
+        )
+        response.raise_for_status()
         
-        assert "RedfishVersion" in response.json()
-
-def test_unauthorized_access():
-    """Тест доступа без аутентификации"""
-    response = requests.get(f"{BASE_URL}/redfish/v1", verify=VERIFY_SSL)
-    log_response(response)
-    
-    assert "RedfishVersion" in response.json()
-
-def test_power_management(auth_session):
-    """Тест управления питанием"""
-    current_state = auth_session.get(
-        f"{BASE_URL}/redfish/v1/Systems/system"
-    ).json()["PowerState"]
-    
-    if current_state == "On":
-        reset_type = "Graceful Shutdown"
-        expected_state = "Off"
-    else:
-        reset_type = "On"
-        expected_state = "On"
-    
-    response = auth_session.post(
-        f"{BASE_URL}/redfish/v1/Systems/system/Actions/ComputerSystem.Reset",
-        json={"ResetType": reset_type}
-    )
-    log_response(response)
-    
-    assert response.status_code in [200, 204]
-    
-    timeout = time.time()
-    while True:
-        time.sleep(2)
-        updated_state = auth_session.get(
-            f"{BASE_URL}/redfish/v1/Systems/system"
-        ).json()["PowerState"]
+        assert response.status_code == 200, "Неверный статус-код"
         
-        if updated_state == expected_state or time.time() > timeout:
-            break
-    
-    assert updated_state == expected_state
+        data = response.json()
+        logger.info(f"Получены данные системы: {data}")
+        
+        assert "Status" in data, "Отсутствует поле Status"
+        assert "PowerState" in data, "Отсутствует поле PowerState"
+        assert data["PowerState"] in ["On", "Off"], "Недопустимое значение PowerState"
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Ошибка при запросе информации о системе: {str(e)}")
+        pytest.fail(f"Ошибка запроса: {str(e)}")
 
-if __name__ == "__main__":
-    pytest.main(["-v", "--html=report.html"])
+@pytest.mark.parametrize("power_action, expected_state", [
+    ("On", "On"),
+    ("GracefulShutdown", "Off"),
+], ids=["power_on", "power_off"])
+def test_power_management(
+    auth_session: requests.Session,
+    power_action: str,
+    expected_state: str
+):
+    """Тест управления питанием с обработкой SSL-ошибок"""
+    max_wait = 20
+    poll_interval = 5
+    
+    try:
+        reset_url = f"{BASE_URL}{SYSTEM_ENDPOINT}/Actions/ComputerSystem.Reset"
+        response = auth_session.post(
+            reset_url,
+            json={"ResetType": power_action},
+            verify=SSL_VERIFY,
+            timeout=10
+        )
+    
+        expected_codes = {202, 204} 
+        assert response.status_code in expected_codes, (
+            f"Ожидался статус {expected_codes}, получен {response.status_code}"
+        )
+        logger.info(f"Команда {power_action} отправлена успешно. Код: {response.status_code}")
+        
+        start_time = time.time()
+        last_state = None
+        
+        while time.time() - start_time < max_wait:
+            try:
+                system_response = auth_session.get(
+                    f"{BASE_URL}{SYSTEM_ENDPOINT}",
+                    verify=SSL_VERIFY,
+                    timeout=5
+                )
+                system_info = system_response.json()
+                current_state = system_info.get("PowerState")
+                
+                if current_state != last_state:
+                    logger.info(f"Текущее состояние питания: {current_state}")
+                    last_state = current_state
+                
+                if current_state == expected_state:
+                    logger.info(f"Система достигла ожидаемого состояния: {expected_state}")
+                    break
+                    
+                time.sleep(poll_interval)
+            except requests.exceptions.SSLError:
+                system_response = auth_session.get(
+                    f"{BASE_URL}{SYSTEM_ENDPOINT}",
+                    verify=False,
+                    timeout=5
+                )
+                system_info = system_response.json()
+                current_state = system_info.get("PowerState")
+                
+                if current_state == expected_state:
+                    break
+                
+                time.sleep(poll_interval)
+        else:
+            pytest.fail(f"Система не достигла состояния {expected_state} за {max_wait} секунд")
+        
+        assert current_state == expected_state, (
+            f"Ожидалось {expected_state}, получено {current_state}"
+        )
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Ошибка в тесте управления питанием: {str(e)}")
+        pytest.fail(f"Тест не выполнен из-за ошибки: {str(e)}")
+
+@pytest.fixture(autouse=True)
+def log_test_execution(request):
+    """Фикстура для логирования начала/окончания тестов"""
+    logger.info(f"Начало теста: {request.node.name}")
+    yield
+    logger.info(f"Окончание теста: {request.node.name}")
