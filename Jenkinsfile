@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-
-    }
+    agent any
 
     environment {
         BMC_IMAGE = 'romulus/obmc-phosphor-image-romulus-20250212052422.static.mtd'
