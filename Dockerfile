@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-dev libnss3 libxss1 libappindicator3-1 \
     && apt-get clean
 
-RUN pip3 install --no-cache-dir \
+RUN pip3 install --break-system-packages --no-cache-dir \
     selenium \
     pytest \
     requests \
@@ -28,6 +28,3 @@ ENV DISPLAY=:99
 CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 & tail -f /dev/null"]
 
 # docker build -t openbmc-ci-agent .
-# org.codehaus.groovy.control.MultipleCompilationErrorsException: startup failed:
-# WorkflowScript: 3: Invalid agent type "docker" specified. Must be one of [any, label, none] @ line 3, column 9.
-# docker {
