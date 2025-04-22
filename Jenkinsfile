@@ -1,9 +1,6 @@
 pipeline {
     agent {
-        docker {
-            image 'openbmc-ci-agent'
-            args '--privileged'
-        }
+
     }
 
     environment {
