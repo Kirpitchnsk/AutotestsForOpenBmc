@@ -8,39 +8,23 @@ pipeline {
     }
 
     stages {
-        stage('Check Docker') {
+        stage('Setup Environment') {
             steps {
+                sh '''
+                    sudo apt-get update
+                    sudo apt-get install docker.io
+                    sudo systemctl start docker
+                    sudo systemctl enable docker
+                    docker pull jenkins/jenkins:lts
+                    docker run -d -p 8080:8080 -p 50000:50000 --name jenkins -v jenkins_home:/var/jenkins_home jenkins/jenkins:lts
+                    sleep 60 # Wait for Jenkins to start
+                '''
                 script {
-                    try {
-                        sh 'docker --version'
-                    } catch (Exception e) {
-                        error "Docker is not installed or not available. Please install Docker and make sure it's in PATH."
-                    }
+                    sh 'pip install pytest requests selenium locust'
                 }
             }
         }
 
-        stage('Setup Jenkins') {
-            steps {
-                script {
-                    // Проверяем, не запущен ли уже Jenkins
-                    def jenkinsRunning = sh(script: 'docker ps -q --filter name=jenkins', returnStatus: true) == 0
-                    if (!jenkinsRunning) {
-                        sh '''
-                            docker pull jenkins/jenkins:lts
-                            docker run -d -p 8080:8080 -p 50000:50000 \
-                                --name jenkins \
-                                -v jenkins_home:/var/jenkins_home \
-                                -v /var/run/docker.sock:/var/run/docker.sock \
-                                jenkins/jenkins:lts
-                            sleep 30
-                        '''
-                    }
-                }
-            }
-        }
-
-        // Остальные этапы остаются без изменений
         stage('Run OpenBMC in QEMU') {
             steps {
                 sh '''
@@ -48,7 +32,7 @@ pipeline {
                     -drive file=romulus/obmc-phosphor-image-romulus-20250212052422.static.mtd,format=raw,if=mtd \
                     -net nic -net user,hostfwd=:0.0.0.0:2222-:22,hostfwd=:0.0.0.0:2443-:443,hostfwd=udp:0.0.0.0:2623-:623 \
                     -monitor telnet:127.0.0.1:5555,server,nowait -serial mon:stdio &
-                    sleep 120
+                    sleep 120 # Wait for OpenBMC to boot
                 '''
             }
         }
@@ -93,8 +77,6 @@ pipeline {
         always {
             sh '''
                 pkill qemu-system-arm || true
-                docker stop jenkins || true
-                docker rm jenkins || true
             '''
             cleanWs()
         }
