@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'ubuntu:20.04'
+            args '--user root --privileged -v /dev:/dev'
+        }
+    }
 
     environment {
         BMC_URL = "https://127.0.0.1:2443"
