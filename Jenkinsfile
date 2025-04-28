@@ -11,20 +11,21 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 sh '''
-                    mkdir -p /var/lib/apt/lists/partial
-                    chmod -R 0755 /var/lib/apt/lists
-                '''
-        
-                sh '''
-                    apt-get update -o Acquire::CompressionTypes::Order::=gz
-                    apt-get install -y \
-                    python3 \
-                    python3-pip \
-                    qemu-system-arm \
-                    wget \
-                    unzip \
-                    firefox \
-                    xvfb
+                    apt-get update && apt-get install -y \
+                        python3 \
+                        python3-pip \
+                        qemu-system-arm \
+                        wget \
+                        unzip \
+                        firefox \
+                        xvfb
+
+                    wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
+                    tar -xvzf geckodriver-v0.34.0-linux64.tar.gz
+                    mv geckodriver /usr/local/bin/
+                    chmod +x /usr/local/bin/geckodriver
+
+                    pip3 install pytest requests selenium locust robotframework
                 '''
             }
         }
