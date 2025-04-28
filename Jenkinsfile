@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'ubuntu:20.04'
-            args '--user root --privileged -v /dev:/dev'
+            args '--user root --privileged -v /dev:/dev --network host'
         }
     }
 
