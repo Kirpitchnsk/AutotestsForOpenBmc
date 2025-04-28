@@ -11,23 +11,31 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 sh '''
-                    sudo apt-get update
-                    sudo apt install python3 python3-pip
+                    apt-get update && apt-get install -y \
+                        python3 \
+                        python3-pip \
+                        qemu-system-arm \
+                        wget \
+                        unzip \
+                        firefox \
+                        xvfb
 
-                    sudo apt install qemu-system-arm
-
-                    wget https://jenkins.openbmc.org/job/ci-openbmc/lastSuccessfulBuild/distro=ubuntu,label=docker-builder,target=romulus/artifact/openbmc/build/tmp/deploy/images/romulus/*zip*/romulus.zip
-                    unzip romulus.zip
-
-                    sudo apt install firefox
                     wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
                     tar -xvzf geckodriver-v0.34.0-linux64.tar.gz
-                    sudo mv geckodriver /usr/local/bin/
-                    sudo chmod +x /usr/local/bin/geckodriver
+                    mv geckodriver /usr/local/bin/
+                    chmod +x /usr/local/bin/geckodriver
+
+                    pip3 install pytest requests selenium locust robotframework
                 '''
-                script {
-                    sh 'pip3 install pytest requests selenium locust'
-                }
+            }
+        }
+
+        stage('Download OpenBMC Image') {
+            steps {
+                sh '''
+                    wget https://jenkins.openbmc.org/job/ci-openbmc/lastSuccessfulBuild/distro=ubuntu,label=docker-builder,target=romulus/artifact/openbmc/build/tmp/deploy/images/romulus/*zip*/romulus.zip
+                    unzip romulus.zip
+                '''
             }
         }
 
@@ -35,25 +43,24 @@ pipeline {
             steps {
                 sh '''
                     IMAGE_FILE=$(find romulus/ -name "obmc-phosphor-image-romulus-*.static.mtd" -print -quit)
-                    if [ -z "$IMAGE_FILE" ]; then
-                        echo "Error: No matching image file found in romulus/" >&2
-                        exit 1
-                    fi
+                    [ -z "$IMAGE_FILE" ] && { echo "Image file not found"; exit 1; }
 
-                    qemu-system-arm -m 256 -M romulus-bmc -nographic /
-                    -drive file=${IMAGE_FILE},format=raw,if=mtd /
-                    -net nic /
-                    -net user,hostfwd=:0.0.0.0:2222-:22,hostfwd=:0.0.0.0:2443-:443,hostfwd=udp:0.0.0.0:2623-:623,hostname=qemu
-                    
-                    root
-                    0penBmc
+                    nohup qemu-system-arm -m 256 -M romulus-bmc -nographic \
+                        -drive file=${IMAGE_FILE},format=raw,if=mtd \
+                        -net nic \
+                        -net user,hostfwd=:0.0.0.0:2222-:22,hostfwd=:0.0.0.0:2443-:443,hostfwd=udp:0.0.0.0:2623-:623,hostname=qemu > qemu.log 2>&1 &
+
+                    sleep 120
                 '''
             }
         }
 
         stage('Run API Tests') {
             steps {
-                sh 'pytest test_redfish.py -v --junitxml=api_test_results.xml'
+                sh '''
+                    curl -k ${BMC_URL}/redfish/v1/ || { echo "BMC not ready"; exit 1; }
+                    pytest tests/api/test_redfish.py -v --junitxml=api_test_results.xml
+                '''
             }
             post {
                 always {
@@ -65,7 +72,11 @@ pipeline {
 
         stage('Run UI Tests') {
             steps {
-                sh 'pytest tests/ui/openbmc_ui_tests.py -v --junitxml=ui_test_results.xml'
+                sh '''
+                    Xvfb :99 -screen 0 1024x768x16 &> xvfb.log &
+                    export DISPLAY=:99
+                    pytest tests/ui/openbmc_ui_tests.py -v --junitxml=ui_test_results.xml
+                '''
             }
             post {
                 always {
@@ -77,7 +88,15 @@ pipeline {
 
         stage('Run Load Tests') {
             steps {
-                sh 'locust -f tests/load/locustfile.py --headless -u 100 -r 10 --run-time 1m --html=load_test_report.html'
+                sh '''
+                    locust -f tests/load/locustfile.py \
+                        --headless \
+                        -u 100 \
+                        -r 10 \
+                        --run-time 1m \
+                        --html=load_test_report.html \
+                        --host=${BMC_URL}
+                '''
             }
             post {
                 always {
@@ -90,8 +109,10 @@ pipeline {
     post {
         always {
             sh '''
-                pkill qemu-system-arm || true
+                pkill -f qemu-system-arm || true
+                pkill -f Xvfb || true
             '''
+            archiveArtifacts artifacts: 'qemu.log,xvfb.log', fingerprint: true
             cleanWs()
         }
     }
