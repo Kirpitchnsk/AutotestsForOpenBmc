@@ -16,7 +16,6 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 sh '''
-                    apt-get install sudo
                     sudo apt-get update && sudo apt-get install -y \
                         python3 \
                         python3-pip \
@@ -26,7 +25,9 @@ pipeline {
                         xvfb
 
                     wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
-                    tar -xvzf geckodriver-v0.34.0-linux64.tar.gz           
+                    tar -xvzf geckodriver-v0.34.0-linux64.tar.gz
+                    sudo chmod +x /usr/local/bin/geckodriver
+                    sudo mv geckodriver /usr/local/bin/                 
 
                     pip3 install pytest requests selenium locust robotframework
                 '''
