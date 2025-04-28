@@ -16,13 +16,12 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 sh '''
-                    apt-get update && apt-get install -y \
+                    sudo apt-get update && sudo apt-get install -y \
                         python3 \
                         python3-pip \
                         qemu-system-arm \
                         wget \
                         unzip \
-                        firefox \
                         xvfb
 
                     wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
