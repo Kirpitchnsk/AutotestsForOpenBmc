@@ -6,8 +6,11 @@
 ## Структура проекта
 tests/
 ├── ui/openbmc_ui_tests.py # Тесты Web-интерфейса
+
 ├── api/test_redfish.py # Тесты Redfish API
+
 ├── load/locustfile.py # Нагрузочное тестирование
+
 Jenkinsfile # CI/CD конфигурация
 
 # Описание тестов
@@ -51,7 +54,9 @@ Jenkinsfile # CI/CD конфигурация
 
 Тестирование проходит по адресу http://localhost:8089. Загружаем 100 пользователей и добавляем по 10 в секунду. 
 После этого откроется мониторинг.
+
 Или запустить с помощью команды:
+
 bash
 locust -f locustfile.py --headless -u 100 -r 10 -t 5m
 
@@ -61,20 +66,22 @@ locust -f locustfile.py --headless -u 100 -r 10 -t 5m
 bash
 git clone https://github.com/Kirpitchnsk/TestsForOpenBmc.git
 cd TestsForOpenBmc
+
 Установить зависимости:
 
 bash
 sudo apt install qemu-system-arm
 pip install pytest requests selenium locust
+
 Запустить OpenBMC в QEMU:
 
 bash
 qemu-system-arm -m 256 -M romulus-bmc -nographic \
 -drive file=romulus/obmc-phosphor-image-romulus-*.static.mtd,format=raw,if=mtd \
 -net nic -net user,hostfwd=:0.0.0.0:2443-:443
+
 Запустить тесты:
 
-bash
 # API тесты
 pytest test_redfish.py -v
 
