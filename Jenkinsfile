@@ -1,15 +1,9 @@
 pipeline {
-    agent {
-        docker {
-            image 'ubuntu:20.04'
-            args '--user root --privileged -v /dev:/dev --network host'
-        }
-    }
+     agent any
 
     environment {
-        BMC_URL = "https://127.0.0.1:2443"
-        USERNAME = "root"
-        PASSWORD = "0penBmc"
+        // The IMAGE_FILE variable will be set in the "Find image" stage
+        IMAGE_FILE = ''
     }
 
     stages {
@@ -59,52 +53,59 @@ pipeline {
             }
         }
 
-        stage('Run API Tests') {
+        stage('API tests') {
             steps {
-                sh '''
-                    curl -k ${BMC_URL}/redfish/v1/ || { echo "BMC not ready"; exit 1; }
-                    pytest tests/api/test_redfish.py -v --junitxml=api_test_results.xml
-                '''
+                // Run pytest against the Redfish API tests, logging to a file and generating junit XML
+                sh """
+                   pytest tests/api \
+                     --junitxml=api_results.xml \
+                     --capture=tee-sys \
+                     --log-file=openbmc_tests.log \
+                     --log-file-level=INFO
+                """
             }
             post {
                 always {
-                    junit 'api_test_results.xml'
-                    archiveArtifacts artifacts: 'api_test_results.xml', fingerprint: true
+                    junit 'api_results.xml'
+                    archiveArtifacts artifacts: 'openbmc_tests.log', fingerprint: true
                 }
             }
         }
 
-        stage('Run UI Tests') {
+        stage('UI tests') {
             steps {
-                sh '''
-                    Xvfb :99 -screen 0 1024x768x16 &> xvfb.log &
-                    export DISPLAY=:99
-                    pytest tests/ui/openbmc_ui_tests.py -v --junitxml=ui_test_results.xml
-                '''
+                // Run Selenium-based UI tests in headless mode, logging to ui_tests.log
+                sh """
+                   pytest tests/ui \
+                     --capture=tee-sys \
+                     --log-file=ui_tests.log \
+                     --log-file-level=INFO
+                """
             }
             post {
                 always {
-                    junit 'ui_test_results.xml'
-                    archiveArtifacts artifacts: 'ui_test_results.xml', fingerprint: true
+                    archiveArtifacts artifacts: 'ui_tests.log', fingerprint: true
                 }
             }
         }
 
-        stage('Run Load Tests') {
+        stage('Load tests') {
             steps {
-                sh '''
-                    locust -f tests/load/locustfile.py \
-                        --headless \
-                        -u 100 \
-                        -r 10 \
-                        --run-time 1m \
-                        --html=load_test_report.html \
-                        --host=${BMC_URL}
-                '''
+                // Run Locust in headless mode for a fixed duration, outputting CSV and console logs
+                sh """
+                   locust \
+                     -f tests/load/locustfile.py \
+                     --headless \
+                     -u 50 -r 5 \
+                     -t 1m \
+                     --csv=locust_report \
+                     --logfile=load_tests.log \
+                     --loglevel INFO
+                """
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'load_test_report.html', fingerprint: true
+                    archiveArtifacts artifacts: 'load_tests.log, locust_report*.csv', fingerprint: true
                 }
             }
         }
@@ -114,9 +115,7 @@ pipeline {
         always {
             sh '''
                 pkill -f qemu-system-arm || true
-                pkill -f Xvfb || true
             '''
-            archiveArtifacts artifacts: 'qemu.log,xvfb.log', fingerprint: true
             cleanWs()
         }
     }
