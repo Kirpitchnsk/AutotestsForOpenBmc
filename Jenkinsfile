@@ -15,15 +15,14 @@ pipeline {
                         python3-pip \
                         qemu-system-arm \
                         wget \
-                        unzip \
-                        xvfb
+                        unzip
 
                     wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
                     tar -xvzf geckodriver-v0.34.0-linux64.tar.gz
-                    chmod +x /usr/local/bin/geckodriver
-                    mv geckodriver /usr/local/bin/                 
+                    mv geckodriver /usr/local/bin/   
+                    chmod +x /usr/local/bin/geckodriver              
 
-                    pip3 install pytest requests selenium locust robotframework
+                    pip3 install pytest requests selenium locust robotframework --break-system-packages
                 '''
             }
         }
@@ -57,7 +56,7 @@ pipeline {
             steps {
                 // Run pytest against the Redfish API tests, logging to a file and generating junit XML
                 sh """
-                   pytest tests/api \
+                   pytest tests/api/test_redfish.py -v \
                      --junitxml=api_results.xml \
                      --capture=tee-sys \
                      --log-file=openbmc_tests.log \
@@ -76,7 +75,7 @@ pipeline {
             steps {
                 // Run Selenium-based UI tests in headless mode, logging to ui_tests.log
                 sh """
-                   pytest tests/ui \
+                   pytest tests/ui/openbmc_ui_tests.py -v \
                      --capture=tee-sys \
                      --log-file=ui_tests.log \
                      --log-file-level=INFO
