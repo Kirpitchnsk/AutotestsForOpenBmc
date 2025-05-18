@@ -20,22 +20,8 @@ PASSWORD = "0penBmc"
 SYSTEM_ENDPOINT = "/redfish/v1/Systems/system"
 SSL_VERIFY = False
 
-def wait_for_bmc_ready():
-    """Ждем доступности BMC"""
-    import socket
-    for _ in range(30):  # 30 попыток с интервалом 10 сек = 5 минут
-        try:
-            with socket.create_connection(("127.0.0.1", 2443), timeout=5):
-                return
-        except (socket.timeout, ConnectionRefusedError):
-            logger.info("BMC not ready, waiting...")
-            time.sleep(10)
-    pytest.fail("BMC не доступен после 5 минут ожидания")
-
 @pytest.fixture(scope="session")
 def auth_session() -> requests.Session:
-
-    wait_for_bmc_ready()
 
     """Фикстура для аутентификации с обработкой SSL-сертификатов"""
     session = requests.Session()
@@ -89,11 +75,14 @@ def test_authentication(auth_session: requests.Session):
 def test_system_info(auth_session: requests.Session):
     """Тест получения информации о системе"""
     try:
+        reset_url = f"{BASE_URL}{SYSTEM_ENDPOINT}/Actions/ComputerSystem.Reset"
+
         response = auth_session.get(
             f"{BASE_URL}{SYSTEM_ENDPOINT}",
             verify=False,
             timeout=5
         )
+
         response.raise_for_status()
         
         assert response.status_code == 200, "Неверный статус-код"
@@ -135,7 +124,7 @@ def test_power_management(
         assert response.status_code in expected_codes, (
             f"Ожидался статус {expected_codes}, получен {response.status_code}"
         )
-        logger.info(f"Команда {power_action} отправлена успешно. Код: {response.status_code}")
+        logger.info(f"Команда {power_action} отправлена успешно. Код: {response.status_code}.")
         
         start_time = time.time()
         last_state = None

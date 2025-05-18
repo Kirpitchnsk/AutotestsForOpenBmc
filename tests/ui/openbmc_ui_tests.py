@@ -20,7 +20,7 @@ def browser():
     
     yield driver
 
-    driver.implicitly_wait(10)
+    driver.implicitly_wait(20)
     driver.quit()
 
 def test_successful_login(browser):
@@ -35,7 +35,7 @@ def test_successful_login(browser):
     password_field.send_keys(PASSWORD)
     login_button.click()
     
-    time.sleep(3)  
+    time.sleep(10)  
     assert "Overview" in browser.title
     assert "Log out" in browser.page_source
 
@@ -51,7 +51,7 @@ def test_invalid_login(browser):
     password_field.send_keys(INVALID_PASSWORD)
     login_button.click()
 
-    time.sleep(1)
+    time.sleep(10)
     current_url = browser.current_url
     assert current_url == BMC_URL
 

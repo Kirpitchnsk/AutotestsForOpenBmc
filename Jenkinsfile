@@ -17,7 +17,7 @@ pipeline {
                         unzip \
                         tmux
 
-                    apt-get install -y firefox-esr xvfb
+                    apt-get install -y firefox-esr
 
                     wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
                     tar -xvzf geckodriver-v0.34.0-linux64.tar.gz
