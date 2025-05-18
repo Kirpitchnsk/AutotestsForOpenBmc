@@ -90,13 +90,14 @@ pipeline {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                 sh '''
-                   timeout 250s locust \
+                   timeout 5m locust \
                     -f tests/load/locustfile.py \
                     --headless \
                     --autostart \
                     --users 200 \
                     --spawn-rate 20 \
                     --run-time 4m \
+                    --stop-timeout 30 \
                     --csv=locust_report \
                     --csv-full-history \
                     --logfile=load_tests.log \

@@ -19,6 +19,8 @@ def browser():
     driver = webdriver.Firefox(service=Service('/usr/local/bin/geckodriver'), options=options)
     
     yield driver
+
+    driver.implicitly_wait(10)
     driver.quit()
 
 def test_successful_login(browser):
