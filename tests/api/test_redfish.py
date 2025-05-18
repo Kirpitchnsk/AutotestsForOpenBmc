@@ -31,7 +31,7 @@ def auth_session() -> requests.Session:
             auth_url,
             json={"UserName": USERNAME, "Password": PASSWORD},
             verify=SSL_VERIFY,
-            timeout=10
+            timeout=30
         )
         response.raise_for_status()
         

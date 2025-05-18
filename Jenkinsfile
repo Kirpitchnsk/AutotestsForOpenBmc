@@ -39,11 +39,9 @@ pipeline {
         stage('Run OpenBMC in QEMU') {
             steps {
                 sh '''
-                    tmux new-session -d -s openbmc 'IMAGE_FILE=$(find romulus/ -name "obmc-phosphor-image-romulus-*.static.mtd" -print -quit) ; qemu-system-arm -m 512 -M romulus-bmc -smp -nographic -drive file=$IMAGE_FILE,format=raw,if=mtd -net nic -net user,hostfwd=:0.0.0.0:2222-:22,hostfwd=:0.0.0.0:2443-:443,hostfwd=udp:0.0.0.0:2623-:623,hostname=qemu'
+                    tmux new-session -d -s openbmc 'IMAGE_FILE=$(find romulus/ -name "obmc-phosphor-image-romulus-*.static.mtd" -print -quit) ; qemu-system-arm -m 256 -M romulus-bmc -nographic -drive file=$IMAGE_FILE,format=raw,if=mtd -net nic -net user,hostfwd=:0.0.0.0:2222-:22,hostfwd=:0.0.0.0:2443-:443,hostfwd=udp:0.0.0.0:2623-:623,hostname=qemu'
 
-                    timeout 300 bash -c 'until curl -k https://127.0.0.1:2443/redfish/v1/ 2>/dev/null | grep -q "ServiceRoot"; do sleep 10; echo "Waiting for BMC to start..."; done'
-
-                     sleep 60
+                    sleep 180
                 '''
             }
         }
