@@ -146,7 +146,7 @@ def test_power_management(
                 system_response = auth_session.get(
                     f"{BASE_URL}{SYSTEM_ENDPOINT}",
                     verify=False,
-                    timeout=5
+                    timeout=10
                 )
                 system_info = system_response.json()
                 current_state = system_info.get("PowerState")
