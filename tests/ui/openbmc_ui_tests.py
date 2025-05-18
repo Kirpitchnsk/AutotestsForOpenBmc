@@ -14,7 +14,7 @@ INVALID_PASSWORD = "wrongpassword"
 @pytest.fixture(scope="module")
 def browser():   
     options = Options()
-    options.headless = True 
+    options.add_argument("--headless")
     driver = webdriver.Firefox(service=Service('/usr/local/bin/geckodriver'), options=options)
     
     yield driver
