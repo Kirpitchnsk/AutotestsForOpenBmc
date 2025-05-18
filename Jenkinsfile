@@ -89,7 +89,7 @@ pipeline {
         stage('Load tests') {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-
+                script {
                 def exitCode = sh(
                     script: '''
 
@@ -115,6 +115,7 @@ pipeline {
                     error "Тесты упали с кодом ${exitCode}"
                 }
 
+                }
                 }
             }
             post {
