@@ -48,7 +48,7 @@ pipeline {
 
         stage('API tests') {
             steps {
-                
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                 sh '''
                    pytest tests/api/test_redfish.py -v \
                      --junitxml=api_results.xml \
@@ -56,6 +56,7 @@ pipeline {
                      --log-file=openbmc_tests.log \
                      --log-file-level=INFO
                 '''
+                }
             }
             post {
                 always {
@@ -67,13 +68,14 @@ pipeline {
 
         stage('UI tests') {
             steps {
-                
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                 sh '''
                    pytest tests/ui/openbmc_ui_tests.py -v \
                      --capture=tee-sys \
                      --log-file=ui_tests.log \
                      --log-file-level=INFO
                 '''
+                }
             }
             post {
                 always {
@@ -84,7 +86,7 @@ pipeline {
 
         stage('Load tests') {
             steps {
-                
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                 sh '''
                    locust \
                      -f tests/load/locustfile.py \
@@ -95,6 +97,7 @@ pipeline {
                      --logfile=load_tests.log \
                      --loglevel INFO
                 '''
+                }
             }
             post {
                 always {
@@ -109,6 +112,7 @@ pipeline {
             sh '''
                 tmux kill-session -t openbmc 2>/dev/null || true
             '''
+            
             cleanWs()
         }
     }
