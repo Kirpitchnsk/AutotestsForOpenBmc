@@ -17,14 +17,14 @@ pipeline {
                         unzip \
                         tmux
 
-                    apt-get install -y firefox-esr
+                    apt-get install -y firefox-esr xvfb
 
                     wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
                     tar -xvzf geckodriver-v0.34.0-linux64.tar.gz
                     chmod +x geckodriver  
                     mv geckodriver /usr/local/bin/          
 
-                    pip3 install pytest requests selenium locust robotframework --break-system-packages
+                    pip3 install pytest requests selenium locust robotframework webdriver-manager --break-system-packages
                 '''
             }
         }

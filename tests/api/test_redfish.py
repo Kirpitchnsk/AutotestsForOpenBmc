@@ -20,10 +20,27 @@ PASSWORD = "0penBmc"
 SYSTEM_ENDPOINT = "/redfish/v1/Systems/system"
 SSL_VERIFY = False
 
+def wait_for_bmc_ready():
+    """Ждем доступности BMC"""
+    import socket
+    for _ in range(30):  # 30 попыток с интервалом 10 сек = 5 минут
+        try:
+            with socket.create_connection(("127.0.0.1", 2443), timeout=5):
+                return
+        except (socket.timeout, ConnectionRefusedError):
+            logger.info("BMC not ready, waiting...")
+            time.sleep(10)
+    pytest.fail("BMC не доступен после 5 минут ожидания")
+
 @pytest.fixture(scope="session")
 def auth_session() -> requests.Session:
+
+    wait_for_bmc_ready()
+
     """Фикстура для аутентификации с обработкой SSL-сертификатов"""
     session = requests.Session()
+    session.timeout = 30
+
     auth_url = f"{BASE_URL}/redfish/v1/SessionService/Sessions"
     
     try:
@@ -31,7 +48,7 @@ def auth_session() -> requests.Session:
             auth_url,
             json={"UserName": USERNAME, "Password": PASSWORD},
             verify=SSL_VERIFY,
-            timeout=5
+            timeout=30
         )
         response.raise_for_status()
         
