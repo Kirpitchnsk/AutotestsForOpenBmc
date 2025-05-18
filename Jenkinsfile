@@ -42,19 +42,23 @@ pipeline {
                     IMAGE_FILE=$(find romulus/ -name "obmc-phosphor-image-romulus-*.static.mtd" -print -quit)
                     [ -z "$IMAGE_FILE" ] && { echo "Image file not found"; exit 1; }
 
-                    nohup qemu-system-arm -m 256 -M romulus-bmc -nographic \
-                        -drive file=${IMAGE_FILE},format=raw,if=mtd \
-                        -net nic \
-                        -net user,hostfwd=:0.0.0.0:2222-:22,hostfwd=:0.0.0.0:2443-:443,hostfwd=udp:0.0.0.0:2623-:623,hostname=qemu > qemu.log 2>&1 &
+                    tmux new-session -d -s openbmc \\
+                            "qemu-system-arm -m 256 -M romulus-bmc -nographic \\
+                            -drive file=\\"$IMAGE_FILE\\",format=raw,if=mtd \\
+                            -net nic \\
+                            -net user,hostfwd=:0.0.0.0:2222-:22,hostfwd=:0.0.0.0:2443-:443,hostfwd=udp:0.0.0.0:2623-:623,hostname=qemu > qemu.log 2>&1"
 
                     sleep 120
+
+                    tmux send-keys -t openbmc "root" C-m
+                    tmux send-keys -t openbmc "0penBmc" C-m
                 '''
             }
         }
 
-        /*stage('API tests') {
+        stage('API tests') {
             steps {
-                // Run pytest against the Redfish API tests, logging to a file and generating junit XML
+                
                 sh """
                    pytest tests/api/test_redfish.py -v \
                      --junitxml=api_results.xml \
@@ -69,11 +73,11 @@ pipeline {
                     archiveArtifacts artifacts: 'openbmc_tests.log', fingerprint: true
                 }
             }
-        }*/
+        }
 
         stage('UI tests') {
             steps {
-                // Run Selenium-based UI tests in headless mode, logging to ui_tests.log
+                
                 sh """
                    pytest tests/ui/openbmc_ui_tests.py -v \
                      --capture=tee-sys \
@@ -90,7 +94,7 @@ pipeline {
 
         stage('Load tests') {
             steps {
-                // Run Locust in headless mode for a fixed duration, outputting CSV and console logs
+                
                 sh """
                    locust \
                      -f tests/load/locustfile.py \
@@ -113,7 +117,7 @@ pipeline {
     post {
         always {
             sh '''
-                pkill -f qemu-system-arm || true
+                tmux kill-session -t openbmc 2>/dev/null || true
             '''
             cleanWs()
         }
