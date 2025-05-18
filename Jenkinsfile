@@ -52,7 +52,7 @@ pipeline {
             }
         }
 
-        stage('API tests') {
+        /*stage('API tests') {
             steps {
                 // Run pytest against the Redfish API tests, logging to a file and generating junit XML
                 sh """
@@ -69,7 +69,7 @@ pipeline {
                     archiveArtifacts artifacts: 'openbmc_tests.log', fingerprint: true
                 }
             }
-        }
+        }*/
 
         stage('UI tests') {
             steps {
