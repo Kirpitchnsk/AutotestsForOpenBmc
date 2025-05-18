@@ -31,7 +31,7 @@ def auth_session() -> requests.Session:
             auth_url,
             json={"UserName": USERNAME, "Password": PASSWORD},
             verify=SSL_VERIFY,
-            timeout=10
+            timeout=5
         )
         response.raise_for_status()
         
@@ -51,7 +51,7 @@ def auth_session() -> requests.Session:
             auth_url,
             json={"UserName": USERNAME, "Password": PASSWORD},
             verify=False,
-            timeout=10
+            timeout=5
         )
         if response.status_code == 201:
             session.verify = False
@@ -75,7 +75,7 @@ def test_system_info(auth_session: requests.Session):
         response = auth_session.get(
             f"{BASE_URL}{SYSTEM_ENDPOINT}",
             verify=False,
-            timeout=10
+            timeout=5
         )
         response.raise_for_status()
         
@@ -111,7 +111,7 @@ def test_power_management(
             reset_url,
             json={"ResetType": power_action},
             verify=SSL_VERIFY,
-            timeout=10
+            timeout=5
         )
     
         expected_codes = {202, 204} 
@@ -140,7 +140,7 @@ def test_power_management(
                 if current_state == expected_state:
                     logger.info(f"Система достигла ожидаемого состояния: {expected_state}")
                     break
-                    
+                
                 time.sleep(poll_interval)
             except requests.exceptions.SSLError:
                 system_response = auth_session.get(
