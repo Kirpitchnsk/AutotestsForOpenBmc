@@ -15,6 +15,7 @@ INVALID_PASSWORD = "wrongpassword"
 def browser():   
     options = Options()
     options.add_argument("--headless")
+    options.binary_location = "/usr/bin/firefox"
     driver = webdriver.Firefox(service=Service('/usr/local/bin/geckodriver'), options=options)
     
     yield driver
