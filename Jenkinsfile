@@ -49,13 +49,13 @@ pipeline {
         stage('API tests') {
             steps {
                 
-                sh """
+                sh '''
                    pytest tests/api/test_redfish.py -v \
                      --junitxml=api_results.xml \
                      --capture=tee-sys \
                      --log-file=openbmc_tests.log \
                      --log-file-level=INFO
-                """
+                '''
             }
             post {
                 always {
@@ -68,12 +68,12 @@ pipeline {
         stage('UI tests') {
             steps {
                 
-                sh """
+                sh '''
                    pytest tests/ui/openbmc_ui_tests.py -v \
                      --capture=tee-sys \
                      --log-file=ui_tests.log \
                      --log-file-level=INFO
-                """
+                '''
             }
             post {
                 always {
@@ -85,7 +85,7 @@ pipeline {
         stage('Load tests') {
             steps {
                 
-                sh """
+                sh '''
                    locust \
                      -f tests/load/locustfile.py \
                      --headless \
@@ -94,7 +94,7 @@ pipeline {
                      --csv=locust_report \
                      --logfile=load_tests.log \
                      --loglevel INFO
-                """
+                '''
             }
             post {
                 always {
