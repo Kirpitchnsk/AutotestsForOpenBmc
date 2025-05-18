@@ -108,13 +108,13 @@ pipeline {
                     --exit-code-on-error 0
 
                     ''',
-                    returnStatus: true  # Возвращает код, а не падает
+                    returnStatus: true
                 )
                 
                 if (exitCode != 0 && exitCode != 124) {
                     error "Тесты упали с кодом ${exitCode}"
                 }
-                
+
                 }
             }
             post {
