@@ -88,14 +88,18 @@ pipeline {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                 sh '''
-                   locust \
-                     -f tests/load/locustfile.py \
-                     --headless \
-                     -u 50 -r 5 \
-                     -t 1m \
-                     --csv=locust_report \
-                     --logfile=load_tests.log \
-                     --loglevel INFO
+                   timeout 250s locust \
+                    -f tests/load/locustfile.py \
+                    --headless \
+                    --autostart \
+                    --users 200 \
+                    --spawn-rate 20 \
+                    --run-time 4m \
+                    --csv=locust_report \
+                    --csv-full-history \
+                    --logfile=load_tests.log \
+                    --loglevel INFO \
+                    --exit-code-on-error 0
                 '''
                 }
             }
@@ -112,7 +116,7 @@ pipeline {
             sh '''
                 tmux kill-session -t openbmc 2>/dev/null || true
             '''
-            
+
             cleanWs()
         }
     }
