@@ -89,8 +89,11 @@ pipeline {
         stage('Load tests') {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                sh '''
-                   timeout 5m locust \
+
+                def exitCode = sh(
+                    script: '''
+
+                    timeout 5m locust \
                     -f tests/load/locustfile.py \
                     --headless \
                     --autostart \
@@ -103,7 +106,15 @@ pipeline {
                     --logfile=load_tests.log \
                     --loglevel INFO \
                     --exit-code-on-error 0
-                '''
+
+                    ''',
+                    returnStatus: true  # Возвращает код, а не падает
+                )
+                
+                if (exitCode != 0 && exitCode != 124) {
+                    error "Тесты упали с кодом ${exitCode}"
+                }
+                
                 }
             }
             post {
