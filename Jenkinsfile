@@ -2,7 +2,6 @@ pipeline {
      agent any
 
     environment {
-        // The IMAGE_FILE variable will be set in the "Find image" stage
         IMAGE_FILE = ''
     }
 
@@ -20,8 +19,8 @@ pipeline {
 
                     wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
                     tar -xvzf geckodriver-v0.34.0-linux64.tar.gz
-                    mv geckodriver /usr/local/bin/   
-                    chmod +x /usr/local/bin/geckodriver              
+                    chmod +x geckodriver  
+                    mv geckodriver /usr/local/bin/          
 
                     pip3 install pytest requests selenium locust robotframework --break-system-packages
                 '''
@@ -40,19 +39,9 @@ pipeline {
         stage('Run OpenBMC in QEMU') {
             steps {
                 sh '''
-                    IMAGE_FILE=$(find romulus/ -name "obmc-phosphor-image-romulus-*.static.mtd" -print -quit)
-                    [ -z "$IMAGE_FILE" ] && { echo "Image file not found"; exit 1; }
-
-                    tmux new-session -d -s openbmc \\
-                            "qemu-system-arm -m 256 -M romulus-bmc -nographic \\
-                            -drive file=\\"$IMAGE_FILE\\",format=raw,if=mtd \\
-                            -net nic \\
-                            -net user,hostfwd=:0.0.0.0:2222-:22,hostfwd=:0.0.0.0:2443-:443,hostfwd=udp:0.0.0.0:2623-:623,hostname=qemu > qemu.log 2>&1"
+                    tmux new-session -d -s openbmc 'IMAGE_FILE=$(find romulus/ -name "obmc-phosphor-image-romulus-*.static.mtd" -print -quit) ; qemu-system-arm -m 256 -M romulus-bmc -nographic -drive file=$IMAGE_FILE,format=raw,if=mtd -net nic -net user,hostfwd=:0.0.0.0:2222-:22,hostfwd=:0.0.0.0:2443-:443,hostfwd=udp:0.0.0.0:2623-:623,hostname=qemu'
 
                     sleep 120
-
-                    tmux send-keys -t openbmc "root" C-m
-                    tmux send-keys -t openbmc "0penBmc" C-m
                 '''
             }
         }
