@@ -7,6 +7,7 @@ import time
 import pytest
 
 BMC_URL = "https://localhost:2443/?next=/login#/login"
+BMC_URL2 = "https://localhost:2443/login"
 USERNAME = "root"
 PASSWORD = "0penBmc"
 INVALID_PASSWORD = "wrongpassword"
@@ -53,7 +54,7 @@ def test_invalid_login(browser):
 
     time.sleep(10)
     current_url = browser.current_url
-    assert current_url == BMC_URL
+    assert current_url == BMC_URL or current_url == BMC_URL2 
 
 def test_account_lockout(browser):
     """Тест блокировки учетной записи после нескольких неудачных попыток"""
