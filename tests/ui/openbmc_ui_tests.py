@@ -6,7 +6,7 @@ from selenium.common.exceptions import NoSuchElementException
 import time
 import pytest
 
-BMC_URL = "https://localhost:2443/login"
+BMC_URL = "https://localhost:2443/?next=/login#/login"
 USERNAME = "root"
 PASSWORD = "0penBmc"
 INVALID_PASSWORD = "wrongpassword"
