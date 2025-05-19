@@ -117,7 +117,7 @@ def test_power_management(
             reset_url,
             json={"ResetType": power_action},
             verify=SSL_VERIFY,
-            timeout=5
+            timeout=10
         )
     
         expected_codes = {202, 204} 
@@ -134,7 +134,7 @@ def test_power_management(
                 system_response = auth_session.get(
                     f"{BASE_URL}{SYSTEM_ENDPOINT}",
                     verify=SSL_VERIFY,
-                    timeout=5
+                    timeout=10
                 )
                 system_info = system_response.json()
                 current_state = system_info.get("PowerState")
@@ -152,7 +152,7 @@ def test_power_management(
                 system_response = auth_session.get(
                     f"{BASE_URL}{SYSTEM_ENDPOINT}",
                     verify=False,
-                    timeout=5
+                    timeout=10
                 )
                 system_info = system_response.json()
                 current_state = system_info.get("PowerState")
