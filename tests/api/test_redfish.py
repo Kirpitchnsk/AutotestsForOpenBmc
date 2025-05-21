@@ -80,7 +80,7 @@ def test_system_info(auth_session: requests.Session):
         response = auth_session.get(
             f"{BASE_URL}{SYSTEM_ENDPOINT}",
             verify=False,
-            timeout=20
+            timeout=5
         )
 
         response.raise_for_status()
