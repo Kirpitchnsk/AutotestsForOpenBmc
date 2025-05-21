@@ -10,7 +10,7 @@ tests/ <br />
 ├──── test_redfish.py # Тесты Redfish API <br />
 ├── load/<br />
 ├──── locustfile.py # Нагрузочное тестирование <br />
-docker-compose.yml # docker-compose file для запуска  Jenkins в контейнере
+docker-compose.yml # docker-compose file для запуска  Jenkins в контейнере <br />
 Jenkinsfile # CI/CD конфигурация
 
 # Описание тестов
