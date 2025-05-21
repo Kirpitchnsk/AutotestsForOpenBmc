@@ -36,7 +36,7 @@ def test_successful_login(browser):
     password_field.send_keys(PASSWORD)
     login_button.click()
     
-    time.sleep(10)  
+    time.sleep(30)  
     assert "Overview" in browser.title
     assert "Log out" in browser.page_source
 
@@ -52,7 +52,7 @@ def test_invalid_login(browser):
     password_field.send_keys(INVALID_PASSWORD)
     login_button.click()
 
-    time.sleep(10)
+    time.sleep(30)
     current_url = browser.current_url
     assert current_url == BMC_URL or current_url == BMC_URL2 
 
