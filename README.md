@@ -10,6 +10,7 @@ tests/ <br />
 ├──── test_redfish.py # Тесты Redfish API <br />
 ├── load/<br />
 ├──── locustfile.py # Нагрузочное тестирование <br />
+docker-compose.yml # docker-compose file для запуска  Jenkins в контейнере
 Jenkinsfile # CI/CD конфигурация
 
 # Описание тестов
@@ -102,21 +103,23 @@ locust -f locustfile.py
 ```
 
 # Запуск CI/CD в Jenkins
-1. Запустить Docker в Jenkins
+1. Запустить Docker-Compose в Jenkins
 ```bash
-docker run -d -p 8080:8080 -p 50000:50000 --name jenkins -v jenkins_home:/var/jenkins_home jenkins/jenkins:lts
+sudo docker-compose up -d
 ```
-2. Перейти по ссылке `https://localhost:8080`
+2. Перейти по ссылке `https://localhost:8080` чтобы открыть web-интерфейс jenkins
 3. Создать пайплайн, указав в качестве ссылки на Git ссылку на данный репозиторий
 4. Запустить пайплайн
 
 ### Шаги сборки в Jenkins
 
-1. Настройка окружения и установка необходимых компонентов.  
-2. Запуск QEMU с OpenBMC через Pipeline.  
-3. Выполнение автотестов для OpenBMC.  
-4. Запуск WebUI тестов OpenBMC.  
-5. Проведение нагрузочного тестирования OpenBMC.  
+1. Настройка окружения и установка необходимых компонентов.
+2. Установка romulus.  
+3. Запуск QEMU с OpenBMC через Pipeline.  
+4. Выполнение api тестов для OpenBMC.  
+5. Запуск WebUI тестов OpenBMC.  
+6. Проведение нагрузочного тестирования OpenBMC.
+7. Закрытие сессии.
 
 Каждый шаг сопровождается отчетом, который сохраняется в артефактах Jenkins.
 
