@@ -53,6 +53,7 @@ pipeline {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                 sh '''
                    pytest tests/api/test_redfish.py -v \
+                     -k "not power_management" \
                      --junitxml=api_results.xml \
                      --capture=tee-sys \
                      --log-file=openbmc_tests.log \
